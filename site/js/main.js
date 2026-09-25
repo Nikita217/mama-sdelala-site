@@ -442,50 +442,113 @@
     toastT = setTimeout(() => toastEl.classList.remove("is-shown"), 2600);
   };
 
+  const cardHTML = (it, i) => {
+    const media = it.photo
+      ? `<img src="${it.photo}" alt="${it.name}" loading="lazy" width="600" height="630">`
+      : `<div class="card__art" style="--art-bg:${ART_BG[it.art] || "#FDE3EE"}" role="img" aria-label="${it.name}, иллюстрация">${ART[it.art] || ART.rose}</div>`;
+    const orderText = `Здравствуйте! Хочу заказать: ${it.name} (${fmt(it.price)} ₽${it.unit || ""})`.replace(/"/g, "&quot;");
+    return `<article class="card" style="--i:${Math.min(i, 6)}" data-tilt>
+      <div class="card__media">${media}</div>
+      <div class="card__body">
+        <h3 class="card__name">${it.name}</h3>
+        <p class="card__desc">${it.desc}</p>
+        <div class="card__row">
+          <span class="card__price">${fmt(it.price)} ₽<small>${it.unit || ""}</small></span>
+          <button class="copy-btn" type="button" data-copy="${orderText}" aria-label="Скопировать название: ${it.name}" title="Скопировать название">
+            <svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>
+          </button>
+          <a class="btn btn--puff" href="${TG}" target="_blank" rel="noopener" data-order="${orderText}">Заказать</a>
+        </div>
+      </div>
+    </article>`;
+  };
+  const countOf = (id) => prices.filter((p) => p.tab === id).length;
+
+  /* Компьютер: облачные вкладки. Телефон: все разделы подряд + липкая полоса категорий. */
+  const shelfMQ = matchMedia("(max-width: 860px)");
+  let shelfMode = null;
+  let shelfIO = null;
+
   const renderGrid = () => {
     const items = prices.filter((p) => p.tab === activeTab);
     grid.setAttribute("aria-labelledby", `tab-${activeTab}`);
-    grid.innerHTML = items.map((it, i) => {
-      const media = it.photo
-        ? `<img src="${it.photo}" alt="${it.name}" loading="lazy" width="600" height="630">`
-        : `<div class="card__art" style="--art-bg:${ART_BG[it.art] || "#FDE3EE"}" role="img" aria-label="${it.name}, иллюстрация">${ART[it.art] || ART.rose}</div>`;
-      const orderText = `Здравствуйте! Хочу заказать: ${it.name} (${fmt(it.price)} ₽${it.unit || ""})`;
-      return `<article class="card" style="--i:${i}" data-tilt>
-        <div class="card__media">${media}</div>
-        <div class="card__body">
-          <h3 class="card__name">${it.name}</h3>
-          <p class="card__desc">${it.desc}</p>
-          <div class="card__row">
-            <span class="card__price">${fmt(it.price)} ₽<small>${it.unit || ""}</small></span>
-            <button class="copy-btn" type="button" data-copy="${orderText.replace(/"/g, "&quot;")}" aria-label="Скопировать название: ${it.name}" title="Скопировать название">
-              <svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>
-            </button>
-            <a class="btn btn--puff" href="${TG}" target="_blank" rel="noopener" data-order="${orderText.replace(/"/g, "&quot;")}">Заказать</a>
-          </div>
-        </div>
-      </article>`;
-    }).join("");
+    grid.innerHTML = items.map(cardHTML).join("");
     bindTilt(grid);
   };
+  const renderShelves = () => {
+    grid.removeAttribute("aria-labelledby");
+    grid.innerHTML = tabsData.map((t) => `<section class="shelf" id="shelf-${t.id}" aria-labelledby="shelf-title-${t.id}">
+        <h3 class="shelf__title" id="shelf-title-${t.id}">${t.label} <span>${countOf(t.id)}</span></h3>
+        <div class="shelf__grid">${prices.filter((p) => p.tab === t.id).map(cardHTML).join("")}</div>
+      </section>`).join("");
+  };
+  const markChip = (id) => {
+    tabs.forEach((t) => t.setAttribute("aria-current", String(t.dataset.tab === id)));
+    const chip = tabs.find((t) => t.dataset.tab === id);
+    if (chip && tabsEl.scrollWidth > tabsEl.clientWidth) {
+      tabsEl.scrollTo({ left: chip.offsetLeft - (tabsEl.clientWidth - chip.offsetWidth) / 2, behavior: reduced ? "auto" : "smooth" });
+    }
+  };
 
-  tabsEl.innerHTML = tabsData.map((t, i) => `<button class="tab" role="tab" id="tab-${t.id}" data-tab="${t.id}" aria-selected="${i === 0}" aria-controls="catalog-grid" tabindex="${i === 0 ? 0 : -1}">${t.label}</button>`).join("");
+  tabsEl.innerHTML = tabsData.map((t, i) => `<button class="tab" type="button" id="tab-${t.id}" data-tab="${t.id}">${t.label}<span class="tab__n">${countOf(t.id)}</span></button>`).join("");
   const tabs = $$(".tab", tabsEl);
+
+  const applyCatalogMode = () => {
+    const mobile = shelfMQ.matches;
+    if (mobile === shelfMode) return;
+    shelfMode = mobile;
+    if (shelfIO) { shelfIO.disconnect(); shelfIO = null; }
+    grid.classList.toggle("is-shelves", mobile);
+    tabsEl.classList.toggle("tabs--bar", mobile);
+    if (mobile) {
+      tabsEl.setAttribute("role", "navigation");
+      tabsEl.setAttribute("aria-label", "Разделы каталога");
+      grid.removeAttribute("role");
+      tabs.forEach((t) => { t.removeAttribute("role"); t.removeAttribute("aria-selected"); t.removeAttribute("aria-controls"); t.tabIndex = 0; });
+      renderShelves();
+      shelfIO = new IntersectionObserver((es) => {
+        es.forEach((e) => { if (e.isIntersecting) markChip(e.target.id.replace("shelf-", "")); });
+      }, { rootMargin: "-35% 0px -60% 0px" });
+      $$(".shelf", grid).forEach((sec) => shelfIO.observe(sec));
+      markChip(tabsData[0].id);
+    } else {
+      tabsEl.setAttribute("role", "tablist");
+      tabsEl.setAttribute("aria-label", "Категории каталога");
+      grid.setAttribute("role", "tabpanel");
+      tabs.forEach((t) => {
+        const on = t.dataset.tab === activeTab;
+        t.setAttribute("role", "tab"); t.setAttribute("aria-controls", "catalog-grid");
+        t.setAttribute("aria-selected", on); t.removeAttribute("aria-current"); t.tabIndex = on ? 0 : -1;
+      });
+      renderGrid();
+    }
+    relayout();
+  };
+
   const selectTab = (btn, focus) => {
+    if (shelfMode) {
+      const sec = document.getElementById(`shelf-${btn.dataset.tab}`);
+      markChip(btn.dataset.tab);
+      if (sec) {
+        const barBottom = Math.max(tabsEl.getBoundingClientRect().bottom, 150);
+        const y = sec.getBoundingClientRect().top + scrollY - barBottom - 12;
+        lenis ? lenis.scrollTo(y, { duration: 0.9 }) : scrollTo({ top: y, behavior: reduced ? "auto" : "smooth" });
+      }
+      return;
+    }
     if (btn.dataset.tab === activeTab) return;
     tabs.forEach((t) => { const on = t === btn; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; });
     activeTab = btn.dataset.tab;
     if (focus) btn.focus();
-    if (tabsEl.scrollWidth > tabsEl.clientWidth) {
-      tabsEl.scrollTo({ left: btn.offsetLeft - (tabsEl.clientWidth - btn.offsetWidth) / 2, behavior: reduced ? "auto" : "smooth" });
-    }
     if (document.startViewTransition && !reduced && document.visibilityState === "visible") {
       const vt = document.startViewTransition(renderGrid);
       vt.ready.catch(() => {});
       vt.finished.catch(() => {});
     } else renderGrid();
   };
-  tabsEl.addEventListener("click", (e) => { const b = e.target.closest(".tab"); if (b) selectTab(b); });
+  tabsEl.addEventListener("click", (e) => { const b = e.target.closest(".tab"); if (b) { barTouched = true; selectTab(b); } });
   tabsEl.addEventListener("keydown", (e) => {
+    if (shelfMode) return;
     const i = tabs.indexOf(document.activeElement);
     if (i < 0) return;
     let n = null;
@@ -501,7 +564,26 @@
     const o = e.target.closest("[data-order]");
     if (o) { copyText(o.dataset.order).then((ok) => ok && toast("Название набора скопировано: вставьте его в чат")); }
   });
-  renderGrid();
+  shelfMQ.addEventListener("change", applyCatalogMode);
+
+  // подсказка «категории листаются»: полоса один раз слегка проезжает вправо и возвращается
+  let barTouched = false;
+  ["pointerdown", "touchstart", "wheel"].forEach((ev) => tabsEl.addEventListener(ev, () => { barTouched = true; }, { passive: true }));
+  const hintBar = () => {
+    if (!shelfMode || reduced || barTouched || tabsEl.scrollLeft > 4 || tabsEl.scrollWidth <= tabsEl.clientWidth + 4) return;
+    tabsEl.scrollTo({ left: 70, behavior: "smooth" });
+    setTimeout(() => { if (!barTouched) tabsEl.scrollTo({ left: 0, behavior: "smooth" }); }, 700);
+  };
+  const hintIO = new IntersectionObserver((es) => {
+    if (es[0].isIntersecting) { hintIO.disconnect(); setTimeout(hintBar, 400); }
+  }, { threshold: 0.6 });
+  hintIO.observe(tabsEl);
+  tabsEl.addEventListener("scroll", () => {
+    tabsEl.classList.toggle("is-end", tabsEl.scrollLeft + tabsEl.clientWidth >= tabsEl.scrollWidth - 6);
+    tabsEl.classList.toggle("is-start", tabsEl.scrollLeft < 6);
+  }, { passive: true });
+  tabsEl.classList.add("is-start");
+  applyCatalogMode();
 
   /* ───────── наклон и магнит ───────── */
   function bindTilt(scope = document) {
