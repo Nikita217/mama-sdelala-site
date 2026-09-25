@@ -10,8 +10,8 @@
    ============================================================ */
 window.MAMA_PRICES = [
   // ── Шляпные коробки ────────────────────────────────────────
-  { tab: "hat", name: "Шляпная коробка Ø20 см", desc: "Розы или тюльпаны на выбор, в нежной тишью и с лентой", price: 2000, unit: "", photo: "img/roses-pink-box.webp", art: "rose" },
-  { tab: "hat", name: "Шляпная коробка Ø16 см", desc: "Компактный вариант: розочки в круглой коробке", price: 1500, unit: "", photo: "img/roses-hatbox.webp", art: "rose" },
+  { tab: "hat", name: "Шляпная коробка 20 см", desc: "Розы или тюльпаны на выбор, в нежной тишью и с лентой", price: 2000, unit: "", photo: "img/roses-pink-box.webp", art: "rose" },
+  { tab: "hat", name: "Шляпная коробка 16 см", desc: "Компактный вариант: розочки в круглой коробке", price: 1500, unit: "", photo: "img/roses-hatbox.webp", art: "rose" },
 
   // ── Вёдра и букеты ─────────────────────────────────────────
   { tab: "bouquet", name: "Ведро с тюльпанами", desc: "Весенние зефирные тюльпаны в ведёрке, перевязанном лентой", price: 1800, unit: "", photo: "img/tulips-bucket.webp", art: "tulip" },
@@ -35,7 +35,7 @@ window.MAMA_PRICES = [
   { tab: "season", name: "Новогодняя коробка", desc: "Зефирные мандарины, снежки, хлопок и шампанское", price: 1800, unit: "", photo: "img/newyear-1.webp", art: "box" },
   { tab: "season", name: "Рождественский венок", desc: "Венок из роз, хлопка и мандаринок", price: 2500, unit: "", photo: "img/wreath.webp", art: "wreath" },
   { tab: "season", name: "Пасхальное гнездо", desc: "Зефирное гнёздышко со съедобными яйцами с миндалём", price: 680, unit: "/шт", photo: "img/easter-nests.webp", art: "nest" },
-  { tab: "season", name: "Мини-кулич", desc: "Апельсиновое песочное печенье, шоколад и зефир. Ø6 × 11 см", price: 750, unit: "/шт", photo: "img/kulichi.webp", art: "kulich" }
+  { tab: "season", name: "Мини-кулич", desc: "Апельсиновое песочное печенье, шоколад и зефир. Диаметр 6 см, высота 11 см", price: 750, unit: "/шт", photo: "img/kulichi.webp", art: "kulich" }
 ];
 
 window.MAMA_TABS = [
