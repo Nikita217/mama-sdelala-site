@@ -1,3 +1,11 @@
+# второй домен .online ведёт на основной .ru (одна копия сайта для поисковиков)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP_HOST} ^(www\.)?mama-sdelala-zefir\.online$ [NC,OR]
+  RewriteCond %{HTTP_HOST} ^www\.mama-sdelala-zefir\.ru$ [NC]
+  RewriteRule ^(.*)$ http://mama-sdelala-zefir.ru/$1 [R=301,L]
+</IfModule>
+
 # HTML всегда проверяется заново, чтобы изменения на сайте были видны сразу
 <IfModule mod_headers.c>
   <FilesMatch "\.(html|txt|xml)$">

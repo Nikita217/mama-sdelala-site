@@ -825,5 +825,14 @@ body.is-ready .hero__copy .char { animation: hero-char 0.9s var(--ease-out) both
   .btn--ghost, .card__badge, .footer { backdrop-filter: none; -webkit-backdrop-filter: none; }
   .footer { background: rgba(255, 255, 255, 0.92); }
   .giveaway__star { animation: none; }
+  /* декоративные иллюстрации не должны закрывать текст на узком экране */
+  .about__figure .about__ill, .bouquets__flower { display: none; }
+  .tag__pear { width: 64px; height: 76px; right: 18px; bottom: 16px; }
   .box, .lid, .hero__copy { will-change: transform; }
 }
+
+/* удобные для пальца ссылки в подвале и логотип */
+.footer__links { gap: 0; }
+.footer__links a { display: inline-flex; align-items: center; min-height: 44px; }
+.footer__small a { display: inline-block; padding: 10px 0; }
+.logo { padding-block: 7px; }
