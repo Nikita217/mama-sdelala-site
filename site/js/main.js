@@ -11,6 +11,7 @@
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
   const isMobile = () => innerWidth <= 860;
+  const lite = matchMedia("(max-width: 860px), (pointer: coarse)").matches;
 
   const TG = "https://t.me/Love_mtvv";
   const CHANNEL = "https://t.me/mama_sdelala";
@@ -84,7 +85,7 @@
   const buildSky = () => {
     const planes = { far: $(".sky__plane--far"), mid: $(".sky__plane--mid"), near: $(".sky__plane--near") };
     const spec = [
-      ["far", 7, 18, 34, 0.06], ["mid", 6, 14, 26, 0.16], ["near", 4, 16, 30, 0.3]
+      ["far", lite ? 3 : 7, 18, 34, 0.06], ["mid", lite ? 3 : 6, 14, 26, 0.16], ["near", lite ? 2 : 4, 16, 30, 0.3]
     ];
     spec.forEach(([name, n, wMin, wMax, depth]) => {
       for (let i = 0; i < n; i++) {
@@ -125,14 +126,19 @@
     const A = hex(a), B = hex(b);
     return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",")})`;
   };
-  const root = document.documentElement;
+  const skyEl = $(".sky");
+  let lastSkyKey = "";
   const updateSky = (y, docH) => {
     const p = clamp(y / Math.max(1, docH - innerHeight));
     const f = p * (skyStops.length - 1);
     const i = Math.min(skyStops.length - 2, Math.floor(f));
     const t = f - i;
-    ["--sky-1", "--sky-2", "--sky-3"].forEach((v, k) => root.style.setProperty(v, mix(skyStops[i][k], skyStops[i + 1][k], t)));
-    if (reduced) return;
+    const key = (f * 50) | 0;
+    if (key !== lastSkyKey) {
+      lastSkyKey = key;
+      ["--sky-1", "--sky-2", "--sky-3"].forEach((v, k) => skyEl.style.setProperty(v, mix(skyStops[i][k], skyStops[i + 1][k], t)));
+    }
+    if (reduced || lite) return;
     const H = innerHeight + 400;
     sky.items.forEach((it) => {
       let py = (it.y * H - y * it.depth) % H;
@@ -140,7 +146,7 @@
       it.el.style.transform = `translate3d(0, ${py - 200}px, 0)`;
     });
   };
-  if (reduced) sky.items.forEach((it) => { it.el.style.transform = `translateY(${it.y * innerHeight}px)`; });
+  if (reduced || lite) sky.items.forEach((it) => { it.el.style.transform = `translateY(${it.y * innerHeight}px)`; });
 
   /* ───────── HERO: шляпная коробка ───────── */
   const hero = $(".hero");
@@ -156,15 +162,16 @@
 
   const petals = [];
   const petalColors = ["#F9CFE0", "#F4B6CF", "#FFFFFF", "#EFA3C3", "#C7E08E", "#FBE2EC"];
-  for (let i = 0; i < 16; i++) {
+  const PETALS = lite ? 10 : 16;
+  for (let i = 0; i < PETALS; i++) {
     const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     s.setAttribute("class", "box__petal");
     s.setAttribute("viewBox", "0 0 40 52");
     s.innerHTML = `<use href="#petal"/>`;
     s.style.fill = petalColors[i % petalColors.length];
-    s.style.filter = "drop-shadow(0 6px 8px rgba(184,56,111,.25))";
+    if (!lite) s.style.filter = "drop-shadow(0 6px 8px rgba(184,56,111,.25))";
     petalsWrap.appendChild(s);
-    const a = (i / 16) * Math.PI * 2 + rand(-0.2, 0.2);
+    const a = (i / PETALS) * Math.PI * 2 + rand(-0.2, 0.2);
     petals.push({ el: s, a, d: rand(0.55, 1.05), r: rand(-240, 240), delay: rand(0, 0.35), sc: rand(0.7, 1.4) });
   }
   const charSpread = heroChars.map((c, i) => ({ el: c, dx: (i % 2 ? 1 : -1) * rand(10, 40), dy: rand(-60, -10), r: rand(-20, 20) }));
@@ -180,7 +187,7 @@
     const t1 = easeInOut(seg(p, 0.03, 0.28));
     heroCopy.style.opacity = 1 - t1;
     heroCopy.style.transform = `translate3d(0, ${-t1 * 5}vh, 0) scale(${1 - t1 * 0.08})`;
-    heroCopy.style.filter = t1 > 0.01 ? `blur(${t1 * 8}px)` : "";
+    heroCopy.style.filter = !lite && t1 > 0.01 ? `blur(${t1 * 8}px)` : "";
     heroCopy.style.pointerEvents = t1 > 0.5 ? "none" : "";
     charSpread.forEach((c) => { c.el.style.translate = `${c.dx * t1}px ${c.dy * t1}px`; c.el.style.rotate = `${c.r * t1}deg`; });
 
@@ -287,12 +294,13 @@
     row.innerHTML += row.innerHTML;
     return { row, x: i ? -row.scrollWidth / 2 : 0, dir: i ? 1 : -1 };
   });
-  let lastY = scrollY, velocity = 0;
+  let lastY = scrollY, velocity = 0, marqueeVisible = false;
+  new IntersectionObserver((es) => { marqueeVisible = es[0].isIntersecting; }).observe($(".marquee"));
   const updateMarquee = (y) => {
     const dy = y - lastY;
     velocity += (Math.abs(dy) - velocity) * 0.1;
     lastY = y;
-    if (reduced) return;
+    if (reduced || !marqueeVisible) return;
     rows.forEach((r) => {
       const half = r.row.scrollWidth / 2;
       r.x += r.dir * (0.45 + Math.min(velocity, 60) * 0.12);
@@ -316,15 +324,8 @@
   const header = $(".header");
   const stickyCta = $(".sticky-cta");
   const finalSec = $("#final");
-  let prevY = scrollY;
   const updateChrome = (y) => {
     header.classList.toggle("is-scrolled", y > 40);
-    const down = y > prevY + 2, up = y < prevY - 2;
-    if (!menuOpen) {
-      if (down && y > innerHeight * 0.6) header.classList.add("is-hidden");
-      else if (up) header.classList.remove("is-hidden");
-    }
-    prevY = y;
     const fr = finalSec.getBoundingClientRect();
     stickyCta.classList.toggle("is-shown", y > innerHeight * 0.9 && fr.top > innerHeight * 0.7);
   };
@@ -386,7 +387,6 @@
     if (menuOpen) return closeMenu();
     menuOpen = true;
     menu.hidden = false;
-    header.classList.remove("is-hidden");
     burger.setAttribute("aria-expanded", "true");
     burger.setAttribute("aria-label", "Закрыть меню");
     lenis && lenis.stop();
