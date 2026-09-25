@@ -95,20 +95,21 @@
         const w = rand(wMin, wMax) * (isMobile() ? 1.8 : 1);
         svg.style.cssText = `--w:${w}vw;--x:${rand(-10, 90)}vw;--y:0;--d:${rand(40, 90)}s`;
         planes[name].appendChild(svg);
-        sky.items.push({ el: svg, y: rand(0, 1), depth: depth * rand(0.85, 1.15) });
+        sky.items.push({ el: svg, y: (i + rand(0.15, 0.85)) / n, depth: depth * rand(0.85, 1.15) });
       }
     });
-    const decos = ["ill-currant", "ill-apple", "ill-flower", "heart", "star", "ill-currant", "petal", "ill-pear"];
-    decos.forEach((id) => {
+    // фрукты: только на больших экранах, каждый в своей полосе по высоте, по очереди слева и справа
+    const decos = lite ? [] : ["ill-currant", "ill-apple", "ill-flower", "heart", "star", "ill-pear"];
+    decos.forEach((id, i) => {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("class", "sky__deco");
       svg.innerHTML = `<use href="#${id}"/>`;
       const fill = id === "heart" ? "#F4B6CF" : id === "star" ? "#F5C542" : id === "petal" ? "#F9CFE0" : "";
       if (fill) svg.style.fill = fill;
-      const edge = Math.random() > 0.5 ? rand(1, 9) : rand(88, 95);
+      const edge = i % 2 ? rand(90, 94) : rand(2, 6);
       svg.style.cssText += `;--w:${rand(28, 56)}px;--x:${edge}vw;--y:0;--d:${rand(6, 11)}s`;
       planes.mid.appendChild(svg);
-      sky.items.push({ el: svg, y: rand(0, 1), depth: rand(0.22, 0.4) });
+      sky.items.push({ el: svg, y: (i + 0.5) / decos.length, depth: 0.3, deco: true });
     });
   };
   buildSky();
@@ -143,10 +144,13 @@
     sky.items.forEach((it) => {
       let py = (it.y * H - y * it.depth) % H;
       if (py < 0) py += H;
-      it.el.style.transform = `translate3d(0, ${py - 200}px, 0)`;
+      const top = py - 200;
+      it.el.style.translate = `0 ${top}px`;
+      // фрукты гаснут у шапки и у нижнего края, чтобы не наезжать на неё и друг на друга
+      if (it.deco) it.el.style.opacity = Math.min(clamp((top - 90) / 140), clamp((innerHeight - top) / 140)) * 0.9;
     });
   };
-  if (reduced || lite) sky.items.forEach((it) => { it.el.style.transform = `translateY(${it.y * innerHeight}px)`; });
+  if (reduced || lite) sky.items.forEach((it) => { it.el.style.translate = `0 ${it.y * innerHeight - 60}px`; });
 
   /* ───────── HERO: шляпная коробка ───────── */
   const hero = $(".hero");
